@@ -124,30 +124,87 @@ class Shape {
     };
 };
 
+class Player {
+    double x, y;
+    double angle;
+public:
+    Player() : x(0.0), y(0.0), angle(0.0) {}
+
+    void move(double dx, double dy) {
+        x += dx;
+        y += dy;
+    }
+
+    void rotate(double dAngle) {
+        angle += dAngle;
+    }
+
+    pair<double, double> getPosition() const {
+        return {x, y};
+    }
+
+    double getAngle() const {
+        return angle;
+    }
+
+    void Control() {
+        if (GetAsyncKeyState(VK_LEFT) || GetAsyncKeyState('A')) {
+            x -= 0.1;
+        }
+        if (GetAsyncKeyState(VK_RIGHT) || GetAsyncKeyState('D')) {
+            x += 0.1;
+        }
+        if (GetAsyncKeyState(VK_UP) || GetAsyncKeyState('W')) {
+            y += 0.1;
+        }
+        if (GetAsyncKeyState(VK_DOWN) || GetAsyncKeyState('S')) {
+            y -= 0.1;
+        }
+        if (GetAsyncKeyState('Q')) {
+            angle -= 5.0;
+            if(angle < 0.0) angle += 360.0;
+        }
+        if (GetAsyncKeyState('E')) {
+            angle += 5.0;
+            if(angle >= 360.0) angle -= 360.0;
+        }
+    }
+};
+
+
 int main() {
     Shape::SetBoundary(1.5);
     Shape::RemoveCursor();
 
-    double x0 = 0.0, y0 = 0.0;
-    double angle = 0.0;
-    bool up = true;
+    // double x0 = 0.0, y0 = 0.0;
+    // double angle = 0.0;
+    // bool up = true;
 
+    // while(true){
+    //     Shape::draw<Shape::Heart>({x0,y0}, angle, Shape::deg, 1.0, 0.5, 0.5);
+    //     angle += 10.0;
+    //     if(angle > 360.0) angle -= 360.0;
+    //     if(up){
+    //         x0 += 0.1;
+    //         y0 += 0.1;
+    //     }
+    //     else{
+    //         x0 -= 0.1;
+    //         y0 -= 0.1;
+    //     }
+
+    //     if(x0 > 1.2) up = false;
+    //     if(x0 < -1.2) up = true;
+    //     Sleep(100);
+    // }
+
+    Player player;
     while(true){
-        Shape::draw<Shape::Heart>({x0,y0}, angle, Shape::deg, 1.0, 0.5, 0.5);
-        angle += 10.0;
-        if(angle > 360.0) angle -= 360.0;
-        if(up){
-            x0 += 0.1;
-            y0 += 0.1;
-        }
-        else{
-            x0 -= 0.1;
-            y0 -= 0.1;
-        }
-
-        if(x0 > 1.2) up = false;
-        if(x0 < -1.2) up = true;
-        Sleep(100);
+        player.Control();
+        auto pos = player.getPosition();
+        double angle = player.getAngle();
+        Shape::draw<Shape::Square>(pos, angle, Shape::deg, 0.5);
     }
+
     return 0;
 }
