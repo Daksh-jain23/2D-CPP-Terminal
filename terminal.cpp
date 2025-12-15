@@ -18,7 +18,7 @@ double Hyperbola(double x, double y, double a = 1.0, double b = 1.0){
 }
 
 double Astroid(double x, double y, double a = 1.0, double b = 1.0){
-    return pow(x/a, 2.0/3.0) + pow(y/b, 2.0/3.0) - 1;
+    return pow(pow(x/a, 2.0),1/3.0) + pow(pow(y/b, 2.0),1/3.0) - 1;
 }
 
 double LuckyLeaf(double x, double y, double r = 1.0){
