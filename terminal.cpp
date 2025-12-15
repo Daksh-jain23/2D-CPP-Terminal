@@ -13,14 +13,25 @@ class Shape {
         return ' ';                   
     }  
 
-    template<class shapeType, typename... Args>
+    template<class ShapeType, typename... Args>
     static void draw(Args... arg) {
-        for(double y = boundary;y >= -boundary;y-= 0.075){
-            for(double x = -boundary;x <= boundary;x += 0.03){
-                cout << Shade(shapeType::value(x,y, arg...));
-            }
-            cout << endl;
+        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+            cout << "=";
         }
+        cout << "=\n";
+
+        for (double y = boundary; y >= -boundary; y -= 0.075) {
+            cout << "|";
+            for (double x = -boundary; x <= boundary; x += 0.03) {
+                cout << Shade( ShapeType::value(x, y, arg...) );
+            }
+            cout << "|\n";
+        }
+
+        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+            cout << "=";
+        }
+        cout << "=\n";
     }
 
     class Circle {
