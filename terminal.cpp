@@ -8,20 +8,22 @@ class Shape {
         return ' ';                   
     }  
 
+    template<class shapeType, typename... Args>
+    static void draw(double boundary, Args... arg) {
+        for(double y = boundary;y >= -boundary;y-= 0.075){
+            for(double x = -boundary;x <= boundary;x += 0.03){
+                cout << Shade(shapeType::value(x,y, arg...));
+            }
+            cout << endl;
+        }
+    }
+
     class Circle {
     public:
         static double value(double x, double y, double r = 1.0) {
             return x*x + y*y - r*r;
         }
-        
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
+
     };
 
     class Ellipse {
@@ -30,14 +32,6 @@ class Shape {
             return (x*x)/(a*a) + (y*y)/(b*b) - 1;
         }
 
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
     };
 
     class Square {
@@ -46,14 +40,6 @@ class Shape {
             return max(abs(x), abs(y)) - r;
         }
 
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
     };
 
     class Heart {
@@ -64,14 +50,6 @@ class Shape {
             return pow(xd*xd + yd*yd - 1, 3) - r * xd*xd * pow(yd, 3);
         }
 
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
     };
 
     class Hyperbola {
@@ -80,14 +58,6 @@ class Shape {
             return (x*x)/(a*a) - (y*y)/(b*b) - 1;
         }
 
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
     };
 
     class Astroid {
@@ -97,14 +67,6 @@ class Shape {
                    pow(pow(y/b, 2.0), 1.0/3.0) - 1;
         }
 
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
     };
 
     class LuckyLeaf {
@@ -113,20 +75,11 @@ class Shape {
             return pow(x*x + y*y, 5) - r*r * pow(x*x - y*y, 2);
         }
 
-        static void draw(double boundary = 1.5) {
-            for(double y = boundary;y >= -boundary;y-= 0.075){
-                for(double x = -boundary;x <= boundary;x += 0.03){
-                    cout << Shade(value(x,y));
-                }
-                cout << endl;
-            }
-        }
     };
 };             
 
 
 int main() {
-    Shape::Heart::draw();
-    Shape::Astroid::draw();
+    Shape::draw<Shape::Heart>(1.5, 1.0, 0.5, 0.5);
     return 0;
 }
