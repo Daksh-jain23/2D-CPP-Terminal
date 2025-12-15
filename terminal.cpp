@@ -3,7 +3,7 @@
 #include <windows.h>
 using namespace std;
 
-class Shape {
+class Draw{
     inline static double boundary = 1.5;
     public:
     
@@ -14,8 +14,6 @@ class Shape {
     static char shade(double val) {
         return (val <= 0.0) ? '*' : ' ';
     }
-
-
 
     static void RemoveCursor() {
         HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -45,6 +43,7 @@ class Shape {
 
     template<class ShapeType, typename... Args>
     static void draw(pair<double, double> center, double angle, RotationType s = deg, Args... arg) {
+        ResetCursor();
 
         for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
             cout << "=";
@@ -71,6 +70,37 @@ class Shape {
         printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }
   
+    static void drawFunc(function<double(double, double)> func, pair<double, double> center, double angle, RotationType s = deg) {
+        ResetCursor();
+
+        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+            cout << "=";
+        }
+        cout << "=\n";
+        for (double y = boundary; y >= -boundary; y -= 0.075) {
+            cout << "|";
+            for (double x = -boundary; x <= boundary; x += 0.03) {
+
+                auto transformed = Transform(x, y, center.first, center.second);
+                auto rotated = Rotation(transformed.first, transformed.second, angle, s);
+                cout << shade(
+                    func(rotated.first, rotated.second)
+                );
+
+            }
+            cout << "|\n";
+        }
+        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+            cout << "=";
+        }
+        cout << "=\n";
+
+        printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
+    }  
+};
+
+class Functions {
+    public:
     class Line {
     public:
         static double value(double x, double y, double m = 1.0, double c = 0.0, double thickness = 0.05) {
@@ -181,8 +211,8 @@ public:
 
 
 int main() {
-    Shape::SetBoundary(1.5);
-    Shape::RemoveCursor();
+    Draw::SetBoundary(1.5);
+    Draw::RemoveCursor();
 
     // double x0 = 0.0, y0 = 0.0;
     // double angle = 0.0;
@@ -211,8 +241,10 @@ int main() {
         player.Control();
         auto pos = player.getPosition();
         double angle = player.getAngle();
-        Shape::ResetCursor();
-        Shape::draw<Shape::Line>(pos, angle, Shape::deg, 1.0, 0.0);
+
+        Draw::drawFunc([](double x, double y) { 
+            return Functions::Line::value(x, y, 1.0, 0.0); 
+        }, pos, angle, Draw::deg);
     }
 
     return 0;
