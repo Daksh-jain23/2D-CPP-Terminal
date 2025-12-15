@@ -15,6 +15,8 @@ class Shape {
         return (val <= 0.0) ? '*' : ' ';
     }
 
+
+
     static void RemoveCursor() {
         HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_CURSOR_INFO info;
@@ -44,7 +46,6 @@ class Shape {
     template<class ShapeType, typename... Args>
     static void draw(pair<double, double> center, double angle, RotationType s = deg, Args... arg) {
 
-        ResetCursor();
         for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
             cout << "=";
         }
@@ -69,7 +70,14 @@ class Shape {
 
         printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }
-
+  
+    class Line {
+    public:
+        static double value(double x, double y, double m = 1.0, double c = 0.0, double thickness = 0.05) {
+            double out =  y - m * x - c;
+            return abs(out) - thickness;
+        }
+    };
 
     class Circle {
     public:
@@ -203,7 +211,8 @@ int main() {
         player.Control();
         auto pos = player.getPosition();
         double angle = player.getAngle();
-        Shape::draw<Shape::Square>(pos, angle, Shape::deg, 0.5);
+        Shape::ResetCursor();
+        Shape::draw<Shape::Line>(pos, angle, Shape::deg, 1.0, 0.0);
     }
 
     return 0;
