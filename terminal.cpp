@@ -22,7 +22,12 @@ class Shape {
         info.bVisible = FALSE;
         SetConsoleCursorInfo(consoleHandle, &info);
     }
-    
+
+    static void ResetCursor() {
+        COORD pos = {0, 0};
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
+    }
+
     static pair<double, double> Transform(double x, double y, double tx, double ty) {
         return {x -tx, y - ty};
     }
@@ -39,6 +44,7 @@ class Shape {
     template<class ShapeType, typename... Args>
     static void draw(pair<double, double> center, double angle, RotationType s = deg, Args... arg) {
 
+        ResetCursor();
         for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
             cout << "=";
         }
@@ -61,8 +67,9 @@ class Shape {
         }
         cout << "=\n";
 
-        printf("Center: (%.2f, %.2f)\n", center.first, center.second);
+        printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }
+
 
     class Circle {
     public:
@@ -126,9 +133,9 @@ int main() {
     bool up = true;
 
     while(true){
-        system("cls");
         Shape::draw<Shape::Heart>({x0,y0}, angle, Shape::deg, 1.0, 0.5, 0.5);
-        angle += 10;
+        angle += 10.0;
+        if(angle > 360.0) angle -= 360.0;
         if(up){
             x0 += 0.1;
             y0 += 0.1;
