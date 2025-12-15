@@ -1,43 +1,132 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-double Heart(double x, double y, double r = 1.0) {
-    return pow(x*x + y*y - 1, 3) - r*x*x*pow(y, 3);
-}
+class Shape {
+    public:
+    static char Shade(double val) {
+        if(val <= 0.0) return '*';
+        return ' ';                   
+    }  
 
-double Circle(double x, double y, double r = 1.0) {
-    return (x*x)+(y*y)-(r*r);
-}
+    class Circle {
+    public:
+        static double value(double x, double y, double r = 1.0) {
+            return x*x + y*y - r*r;
+        }
+        
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
 
-double Ellipse(double x, double y, double a = 1.0, double b = 1){
-    return (x*x)/(a*a) + (y*y)/(b*b) - 1;
-}
+    class Ellipse {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return (x*x)/(a*a) + (y*y)/(b*b) - 1;
+        }
 
-double Hyperbola(double x, double y, double a = 1.0, double b = 1.0){
-    return (x*x)/(a*a) - (y*y)/(b*b) - 1;
-}
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
 
-double Astroid(double x, double y, double a = 1.0, double b = 1.0){
-    return pow(pow(x/a, 2.0),1/3.0) + pow(pow(y/b, 2.0),1/3.0) - 1;
-}
+    class Square {
+    public:
+        static double value(double x, double y, double r = 1.0) {
+            return max(abs(x), abs(y)) - r;
+        }
 
-double LuckyLeaf(double x, double y, double r = 1.0){
-    return pow(x*x + y*y, 5) - r*r*pow(x*x - y*y, 2);
-}
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
 
-char Shade(double val) {
-    if(val <= 0.0) return '*';
-    return ' ';                   
-}                
- 
+    class Heart {
+    public:
+        static double value(double x, double y, double r = 1.0, double a = 1.0, double b = 1.0) {
+            double xd = x/a;
+            double yd = y/b;
+            return pow(xd*xd + yd*yd - 1, 3) - r * xd*xd * pow(yd, 3);
+        }
+
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
+
+    class Hyperbola {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return (x*x)/(a*a) - (y*y)/(b*b) - 1;
+        }
+
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
+
+    class Astroid {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return pow(pow(x/a, 2.0), 1.0/3.0) +
+                   pow(pow(y/b, 2.0), 1.0/3.0) - 1;
+        }
+
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
+
+    class LuckyLeaf {
+    public:
+        static double value(double x, double y, double r = 1.0) {
+            return pow(x*x + y*y, 5) - r*r * pow(x*x - y*y, 2);
+        }
+
+        static void draw(double boundary = 1.5) {
+            for(double y = boundary;y >= -boundary;y-= 0.075){
+                for(double x = -boundary;x <= boundary;x += 0.03){
+                    cout << Shade(value(x,y));
+                }
+                cout << endl;
+            }
+        }
+    };
+};             
+
 
 int main() {
-    for(double y = 1.3;y >= -1.3;y-= 0.075){
-        for(double x = -1.3;x <= 1.3;x += 0.03){
-           cout << Shade(Astroid(x,y));
-        }
-        cout << endl;
-    }
- 
+    Shape::Heart::draw();
+    Shape::Astroid::draw();
     return 0;
 }
