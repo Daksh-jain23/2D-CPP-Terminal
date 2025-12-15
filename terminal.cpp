@@ -1,4 +1,6 @@
 #include <bits/stdc++.h>
+#include <ctime>
+#include <windows.h>
 using namespace std;
 
 class Shape {
@@ -105,6 +107,12 @@ class Shape {
 
 
 int main() {
-    Shape::draw<Shape::Heart>(45,1.0, 0.5, 0.5);
+    Shape::SetBoundary(1.5);
+    double angle = 0.0;
+    while(true){
+        system("cls");
+        Shape::draw<Shape::Heart>(angle, 1.0, 0.7, 0.7);
+        angle += 0.1;
+    }
     return 0;
 }
