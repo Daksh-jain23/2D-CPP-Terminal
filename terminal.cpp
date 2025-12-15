@@ -13,8 +13,14 @@ class Shape {
         return ' ';                   
     }  
 
+    static pair<double, double> Rotation(double x, double y, double angle) {
+        double x_new = x * cos(angle) - y * sin(angle);
+        double y_new = x * sin(angle) + y * cos(angle);
+        return {x_new, y_new};
+    }
+
     template<class ShapeType, typename... Args>
-    static void draw(Args... arg) {
+    static void draw(double angle, Args... arg) {
         for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
             cout << "=";
         }
@@ -23,7 +29,10 @@ class Shape {
         for (double y = boundary; y >= -boundary; y -= 0.075) {
             cout << "|";
             for (double x = -boundary; x <= boundary; x += 0.03) {
-                cout << Shade( ShapeType::value(x, y, arg...) );
+
+                auto [xr, yr] = Rotation(x, y, angle);
+                cout << Shade( ShapeType::value(xr, yr, arg...) );
+
             }
             cout << "|\n";
         }
@@ -96,6 +105,6 @@ class Shape {
 
 
 int main() {
-    Shape::draw<Shape::Heart>(1.0, 0.5, 0.5);
+    Shape::draw<Shape::Heart>(45,1.0, 0.5, 0.5);
     return 0;
 }
