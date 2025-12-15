@@ -2,14 +2,19 @@
 using namespace std;
 
 class Shape {
+    inline static double boundary = 1.5;
     public:
+    static void SetBoundary(double b) {
+        boundary = b;
+    }
+
     static char Shade(double val) {
         if(val <= 0.0) return '*';
         return ' ';                   
     }  
 
     template<class shapeType, typename... Args>
-    static void draw(double boundary, Args... arg) {
+    static void draw(Args... arg) {
         for(double y = boundary;y >= -boundary;y-= 0.075){
             for(double x = -boundary;x <= boundary;x += 0.03){
                 cout << Shade(shapeType::value(x,y, arg...));
@@ -80,6 +85,6 @@ class Shape {
 
 
 int main() {
-    Shape::draw<Shape::Heart>(1.5, 1.0, 0.5, 0.5);
+    Shape::draw<Shape::Heart>(1.0, 0.5, 0.5);
     return 0;
 }
