@@ -70,7 +70,7 @@ class Draw{
         printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }
   
-    static void drawFunc(function<double(double, double)> func, pair<double, double> center, double angle, RotationType s = deg) {
+    static void drawFunc(function<double(double, double)> func, pair<double, double> center = {0.0 ,0.0}, double angle = 0.0, RotationType s = deg) {
         ResetCursor();
 
         for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
@@ -97,6 +97,7 @@ class Draw{
 
         printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }  
+
 };
 
 class Functions {
@@ -160,6 +161,7 @@ class Functions {
             return pow(x*x + y*y, 5) - r*r * pow(x*x - y*y, 2);
         }
     };
+
 };
 
 class Player {
@@ -214,15 +216,16 @@ int main() {
     Draw::SetBoundary(1.5);
     Draw::RemoveCursor();
 
+    Player player;
     double x0 = 0.0, y0 = 0.0;
     double angle = 0.0;
+    double size = 0.7;
     bool up = true;
 
     // while(true){
     //     Draw::draw<Functions::Heart>({x0,y0}, angle, Draw::deg, 1.0, 0.5, 0.5);
     //     angle += 10.0;
     //     if(angle > 360.0) angle -= 360.0;
-    //     if(up){
     //         x0 += 0.1;
     //         y0 += 0.1;
     //     }
@@ -236,15 +239,19 @@ int main() {
     //     Sleep(10);
     // }
 
-    Player player;
     while(true){
         player.Control();
         auto pos = player.getPosition();
         double angle = player.getAngle();
-
-        Draw::drawFunc([](double x, double y) { 
-            return Functions::Line::value(x, y, 1.0, 0.0); 
+        
+        Draw::drawFunc([&](double x, double y) { 
+            return Functions::Heart::value(x, y, 1, size, size); 
         }, pos, angle, Draw::deg);
+
+        if(up) size += 0.05;
+        else size -= 0.05;
+        if(size > 1) up = false;
+        if(size < 0.7) up = true;
     }
 
     return 0;
