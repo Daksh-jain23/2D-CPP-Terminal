@@ -214,12 +214,12 @@ int main() {
     Draw::SetBoundary(1.5);
     Draw::RemoveCursor();
 
-    // double x0 = 0.0, y0 = 0.0;
-    // double angle = 0.0;
-    // bool up = true;
+    double x0 = 0.0, y0 = 0.0;
+    double angle = 0.0;
+    bool up = true;
 
     // while(true){
-    //     Shape::draw<Shape::Heart>({x0,y0}, angle, Shape::deg, 1.0, 0.5, 0.5);
+    //     Draw::draw<Functions::Heart>({x0,y0}, angle, Draw::deg, 1.0, 0.5, 0.5);
     //     angle += 10.0;
     //     if(angle > 360.0) angle -= 360.0;
     //     if(up){
@@ -233,7 +233,7 @@ int main() {
 
     //     if(x0 > 1.2) up = false;
     //     if(x0 < -1.2) up = true;
-    //     Sleep(100);
+    //     Sleep(10);
     // }
 
     Player player;
