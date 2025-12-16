@@ -323,11 +323,11 @@ int main() {
     Draw::SetBoundary(1.5);
     Draw::RemoveCursor();
 
-    // Player player;
-    // double x0 = 0.0, y0 = 0.0;
-    // double angle = 0.0;
-    // double size = 0.7;
-    // bool up = true;
+    Player player;
+    double x0 = 0.0, y0 = 0.0;
+    double angle = 0.0;
+    double size = 0.7;
+    bool up = true;
 
     // while(true){
     //     Draw::draw<Functions::Heart>({x0,y0}, angle, Draw::deg, 1.0, 0.5, 0.5);
@@ -354,7 +354,41 @@ int main() {
 
     // Draw::FunAnimation::HeartPopPop();
 
-    
-    
-    return 0;
+    while(true){
+        player.Control();
+        auto pos = player.getPosition(); 
+        double angle = player.getAngle();
+
+        Draw::drawByValue(
+            Draw::MergeValues(
+                Draw::getValueMap(
+                    [](double x, double y) {
+                        return Functions::Circle::value(x, y, 0.5);
+                    },
+                    pos,
+                    angle,
+                    Draw::deg
+                ),
+                Draw::MergeValues(
+                   Draw::getValueMap(
+                        [](double x, double y) {
+                            return Functions::Square::value(x, y, 0.4);
+                        },
+                        {1,1},
+                        0.0,
+                        Draw::deg
+                    ),
+                    Draw::getValueMap(
+                        [](double x, double y) {
+                            return Functions::Square::value(x, y ,0.4);
+                        },
+                        {-1,0.5},
+                        0.0,
+                        Draw::deg
+                    )
+                )
+            )
+        );
+    }  
+        return 0;
 }
