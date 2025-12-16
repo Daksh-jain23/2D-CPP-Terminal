@@ -3,6 +3,80 @@
 #include <windows.h>
 using namespace std;
 
+const double x_Step = 0.03;
+const double y_Step = 0.075;
+
+class Functions {
+    public:
+    class Line {
+    public:
+        static double value(double x, double y, double m = 1.0, double c = 0.0, double thickness = 0.05) {
+            double out =  y - m * x - c;
+            return abs(out) - thickness;
+        }
+    };
+
+    class Circle {
+    public:
+        static double value(double x, double y, double r = 1.0) {
+            return x*x + y*y - r*r;
+        }
+    };
+
+    class Ellipse {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return (x*x)/(a*a) + (y*y)/(b*b) - 1;
+        }
+    };
+
+    class Square {
+    public:
+        static double value(double x, double y, double r = 1.0) {
+            return max(abs(x), abs(y)) - r;
+        }
+    };
+
+    class Rectangle {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return max(abs(x)/a, abs(y)/b) - 1;
+        }
+    };
+
+    class Heart {
+    public:
+        static double value(double x, double y, double r = 1.0, double a = 1.0, double b = 1.0) {
+            double xd = x/a;
+            double yd = y/b;
+            return pow(xd*xd + yd*yd - 1, 3) - r * xd*xd * pow(yd, 3);
+        }
+    };
+
+    class Hyperbola {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return (x*x)/(a*a) - (y*y)/(b*b) - 1;
+        }
+    };
+
+    class Astroid {
+    public:
+        static double value(double x, double y, double a = 1.0, double b = 1.0) {
+            return pow(pow(x/a, 2.0), 1.0/3.0) +
+                   pow(pow(y/b, 2.0), 1.0/3.0) - 1;
+        }
+    };
+
+    class LuckyLeaf {
+    public:
+        static double value(double x, double y, double r = 1.0) {
+            return pow(x*x + y*y, 5) - r*r * pow(x*x - y*y, 2);
+        }
+    };
+
+};
+
 class Draw{
     inline static double boundary = 1.5;
     public:
@@ -41,17 +115,19 @@ class Draw{
         return {x_new, y_new};
     }
 
+
+
     template<class ShapeType, typename... Args>
     static void draw(pair<double, double> center, double angle, RotationType s = deg, Args... arg) {
         ResetCursor();
 
-        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
             cout << "=";
         }
         cout << "=\n";
-        for (double y = boundary; y >= -boundary; y -= 0.075) {
+        for (double y = boundary; y >= -boundary; y -= y_Step) {
             cout << "|";
-            for (double x = -boundary; x <= boundary; x += 0.03) {
+            for (double x = -boundary; x <= boundary; x += x_Step) {
 
                 auto transformed = Transform(x, y, center.first, center.second);
                 auto rotated = Rotation(transformed.first, transformed.second, angle, s);
@@ -62,7 +138,7 @@ class Draw{
             }
             cout << "|\n";
         }
-        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
             cout << "=";
         }
         cout << "=\n";
@@ -73,13 +149,13 @@ class Draw{
     static void drawFunc(function<double(double, double)> func, pair<double, double> center = {0.0 ,0.0}, double angle = 0.0, RotationType s = deg) {
         ResetCursor();
 
-        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
             cout << "=";
         }
         cout << "=\n";
-        for (double y = boundary; y >= -boundary; y -= 0.075) {
+        for (double y = boundary; y >= -boundary; y -= y_Step) {
             cout << "|";
-            for (double x = -boundary; x <= boundary; x += 0.03) {
+            for (double x = -boundary; x <= boundary; x += x_Step) {
 
                 auto transformed = Transform(x, y, center.first, center.second);
                 auto rotated = Rotation(transformed.first, transformed.second, angle, s);
@@ -90,7 +166,7 @@ class Draw{
             }
             cout << "|\n";
         }
-        for(double x = -boundary; x <= boundary + 0.03; x += 0.03) {
+        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
             cout << "=";
         }
         cout << "=\n";
@@ -98,70 +174,100 @@ class Draw{
         printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }  
 
-};
 
-class Functions {
-    public:
-    class Line {
-    public:
-        static double value(double x, double y, double m = 1.0, double c = 0.0, double thickness = 0.05) {
-            double out =  y - m * x - c;
-            return abs(out) - thickness;
+
+    static vector<vector<double>> getValueMap(
+        const function<double(double, double)>& func,
+        pair<double, double> center = {0.0, 0.0},
+        double angle = 0.0,
+        RotationType s = deg
+    ) {
+        vector<vector<double>> valueMap;
+
+        int rows = static_cast<int>((2 * boundary) / y_Step) + 1;
+        int cols = static_cast<int>((2 * boundary) / x_Step) + 1;
+
+        valueMap.reserve(rows);
+
+        for (double y = boundary; y >= -boundary; y -= y_Step) {
+            vector<double> row;
+            row.reserve(cols);
+
+            for (double x = -boundary; x <= boundary; x += x_Step) {
+                auto t = Transform(x, y, center.first, center.second);
+                auto r = Rotation(t.first, t.second, angle, s);
+                row.push_back(func(r.first, r.second));
+            }
+            valueMap.push_back(std::move(row));
+        }
+        return valueMap;
+    }
+
+
+    static vector<vector<double>> MergeValues(
+        const vector<vector<double>>& vals1,
+        const vector<vector<double>>& vals2,
+        const function<double(double, double)>& mergeFunc =
+            [](double a, double b) { return min(a, b); }
+    ) {
+        int rows = vals1.size();
+        int cols = vals1[0].size();
+
+        vector<vector<double>> merged(rows, vector<double>(cols));
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                merged[i][j] = mergeFunc(vals1[i][j], vals2[i][j]);
+            }
+        }
+        return merged;
+    }
+
+
+    static void drawByValue(const vector<vector<double>>& values) {
+        ResetCursor();
+
+        int rows = values.size();
+        int cols = values[0].size();
+    
+        cout << "+";
+        for (int j = 0; j < cols; j++) cout << "-";
+        cout << "+\n";
+
+        for (int i = 0; i < rows; i++) {
+            cout << "|";
+            for (int j = 0; j < cols; j++) {
+                cout << shade(values[i][j]);
+            }
+            cout << "|\n";
+        }
+
+        cout << "+";
+        for (int j = 0; j < cols; j++) cout << "-";
+        cout << "+\n";
+    }
+
+
+
+    class FunAnimation {
+        public:
+
+        static void HeartPopPop(){
+            SetBoundary(1.5);
+            RemoveCursor();
+            double size = 0.7;
+            bool up = true;
+            while(true){
+                Draw::drawFunc([&](double x, double y) { 
+                    return Functions::Heart::value(x, y, 1, size, size); 
+                });
+                if(up) size += 0.05;
+                else size -= 0.05;
+                if(size > 1) up = false;
+                if(size < 0.7) up = true;
+            }
         }
     };
-
-    class Circle {
-    public:
-        static double value(double x, double y, double r = 1.0) {
-            return x*x + y*y - r*r;
-        }
-    };
-
-    class Ellipse {
-    public:
-        static double value(double x, double y, double a = 1.0, double b = 1.0) {
-            return (x*x)/(a*a) + (y*y)/(b*b) - 1;
-        }
-    };
-
-    class Square {
-    public:
-        static double value(double x, double y, double r = 1.0) {
-            return max(abs(x), abs(y)) - r;
-        }
-    };
-
-    class Heart {
-    public:
-        static double value(double x, double y, double r = 1.0, double a = 1.0, double b = 1.0) {
-            double xd = x/a;
-            double yd = y/b;
-            return pow(xd*xd + yd*yd - 1, 3) - r * xd*xd * pow(yd, 3);
-        }
-    };
-
-    class Hyperbola {
-    public:
-        static double value(double x, double y, double a = 1.0, double b = 1.0) {
-            return (x*x)/(a*a) - (y*y)/(b*b) - 1;
-        }
-    };
-
-    class Astroid {
-    public:
-        static double value(double x, double y, double a = 1.0, double b = 1.0) {
-            return pow(pow(x/a, 2.0), 1.0/3.0) +
-                   pow(pow(y/b, 2.0), 1.0/3.0) - 1;
-        }
-    };
-
-    class LuckyLeaf {
-    public:
-        static double value(double x, double y, double r = 1.0) {
-            return pow(x*x + y*y, 5) - r*r * pow(x*x - y*y, 2);
-        }
-    };
-
 };
 
 class Player {
@@ -212,15 +318,16 @@ public:
 };
 
 
+
 int main() {
     Draw::SetBoundary(1.5);
     Draw::RemoveCursor();
 
-    Player player;
-    double x0 = 0.0, y0 = 0.0;
-    double angle = 0.0;
-    double size = 0.7;
-    bool up = true;
+    // Player player;
+    // double x0 = 0.0, y0 = 0.0;
+    // double angle = 0.0;
+    // double size = 0.7;
+    // bool up = true;
 
     // while(true){
     //     Draw::draw<Functions::Heart>({x0,y0}, angle, Draw::deg, 1.0, 0.5, 0.5);
@@ -239,20 +346,15 @@ int main() {
     //     Sleep(10);
     // }
 
-    while(true){
-        player.Control();
-        auto pos = player.getPosition();
-        double angle = player.getAngle();
-        
-        Draw::drawFunc([&](double x, double y) { 
-            return Functions::Heart::value(x, y, 1, size, size); 
-        }, pos, angle, Draw::deg);
+    // while(true){
+    //     player.Control();
+    //     auto pos = player.getPosition(); 
+    //     double angle = player.getAngle();
+    // }
 
-        if(up) size += 0.05;
-        else size -= 0.05;
-        if(size > 1) up = false;
-        if(size < 0.7) up = true;
-    }
+    // Draw::FunAnimation::HeartPopPop();
 
+    
+    
     return 0;
 }
