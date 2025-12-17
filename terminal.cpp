@@ -79,63 +79,14 @@ class Functions {
 
 class Draw{
     inline static double boundary = 1.5;
-    inline static int rows, cols;
-    inline static vector<pair<double, double>> coordBuffer;
-    inline static vector<vector<char>> screenBuffer;
     public:
     
     static void SetBoundary(double b) {
         boundary = b;
-        FillCoordBuffer();
-        InitializeScreenBuffer();
     }
 
-    static void FillCoordBuffer() {
-        rows = static_cast<int>((2 * boundary) / y_Step) + 1;
-        cols = static_cast<int>((2 * boundary) / x_Step) + 1;
-
-        coordBuffer.clear();
-        coordBuffer.reserve(rows * cols);
-
-        for (double y = boundary; y >= -boundary; y -= y_Step) {
-            for (double x = -boundary; x <= boundary; x += x_Step) {
-                coordBuffer.emplace_back(x, y);
-            }
-        }
-    }
-
-    static void InitializeScreenBuffer() {
-        screenBuffer.clear();
-        screenBuffer.resize(rows+2, vector<char>(cols+2, ' '));
-        for(double x = 0; x <= cols; x++){ 
-            screenBuffer[0][x] = '=';
-            screenBuffer[rows+1][x] = '=';
-        }
-        
-        for(double y = 0; y <= rows; y++){ 
-            screenBuffer[y][0] = '|';
-            screenBuffer[y][cols+1] = '|';
-        }
-
-        screenBuffer[0][0] = '+';
-        screenBuffer[0][cols+1] = '+';
-        screenBuffer[rows+1][0] = '+';
-        screenBuffer[rows+1][cols+1] = '+';
-
-    }
-
-    static void PrintScreenBuffer() {
-        ResetCursor();
-        cout.write(&screenBuffer[0][0], (rows + 2) * (cols + 2));
-    }
-
-    static void UpdateScreenBuffer(double x, double y, double val) {
-        int col = static_cast<int>((x + boundary) / x_Step) + 1;
-        int row = static_cast<int>((boundary - y) / y_Step) + 1;
-
-        if (row >= 1 && row <= rows && col >= 1 && col <= cols) {
-            screenBuffer[row][col] = shade(val);
-        }
+    static char shade(double val) {
+        return (val <= 0.0) ? '*' : ' ';
     }
 
     static void RemoveCursor() {
@@ -145,14 +96,10 @@ class Draw{
         info.bVisible = FALSE;
         SetConsoleCursorInfo(consoleHandle, &info);
     }
-    
+
     static void ResetCursor() {
         COORD pos = {0, 0};
         SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-    }
-    
-    static char shade(double val) {
-        return (val <= 0.0) ? '*' : ' ';
     }
 
     static pair<double, double> Transform(double x, double y, double tx, double ty) {
@@ -172,14 +119,30 @@ class Draw{
 
     template<class ShapeType, typename... Args>
     static void draw(pair<double, double> center, double angle, RotationType s = deg, Args... arg) {
+        ResetCursor();
 
-        for(auto x : coordBuffer) {
-            auto transformed = Transform(x.first, x.second, center.first, center.second);
-            auto rotated = Rotation(transformed.first, transformed.second, angle, s);
-            double val = ShapeType::value(rotated.first, rotated.second, arg...);
-            UpdateScreenBuffer(x.first, x.second, val);
+        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
+            cout << "=";
         }
-        PrintScreenBuffer();
+        cout << "=\n";
+        for (double y = boundary; y >= -boundary; y -= y_Step) {
+            cout << "|";
+            for (double x = -boundary; x <= boundary; x += x_Step) {
+
+                auto transformed = Transform(x, y, center.first, center.second);
+                auto rotated = Rotation(transformed.first, transformed.second, angle, s);
+                cout << shade(
+                    ShapeType::value(rotated.first, rotated.second, arg...)
+                );
+
+            }
+            cout << "|\n";
+        }
+        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
+            cout << "=";
+        }
+        cout << "=\n";
+
         printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
     }
   
@@ -383,51 +346,49 @@ int main() {
     //     Sleep(10);
     // }                            
 
-    while(true){
-        player.Control();
-        auto pos = player.getPosition(); 
-        double angle = player.getAngle();
-        Draw::draw<Functions::Heart>(pos, angle, Draw::deg, 1.0, 0.5, 0.5);
-    }
-
-    // Draw::FunAnimation::HeartPopPop();
-
     // while(true){
     //     player.Control();
     //     auto pos = player.getPosition(); 
     //     double angle = player.getAngle();
+    // }
 
-    //     Draw::drawByValue(
-    //         Draw::MergeValues(
-    //             Draw::getValueMap(
-    //                 [](double x, double y) {
-    //                     return Functions::Circle::value(x, y, 0.5);
-    //                 },
-    //                 pos,
-    //                 angle,
-    //                 Draw::deg
-    //             ),
-    //             Draw::MergeValues(
-    //                Draw::getValueMap(
-    //                     [](double x, double y) {
-    //                         return Functions::Square::value(x, y, 0.4);
-    //                     },
-    //                     {1,1},
-    //                     0.0,
-    //                     Draw::deg
-    //                 ),
-    //                 Draw::getValueMap(
-    //                     [](double x, double y) {
-    //                         return Functions::Square::value(x, y ,0.4);
-    //                     },
-    //                     {-1,0.5},
-    //                     0.0,
-    //                     Draw::deg
-    //                 )
-    //             )
-    //         )
-    //     );
-    // }  
+    // Draw::FunAnimation::HeartPopPop();
 
+    while(true){
+        player.Control();
+        auto pos = player.getPosition(); 
+        double angle = player.getAngle();
+
+        Draw::drawByValue(
+            Draw::MergeValues(
+                Draw::getValueMap(
+                    [](double x, double y) {
+                        return Functions::Circle::value(x, y, 0.5);
+                    },
+                    pos,
+                    angle,
+                    Draw::deg
+                ),
+                Draw::MergeValues(
+                   Draw::getValueMap(
+                        [](double x, double y) {
+                            return Functions::Square::value(x, y, 0.4);
+                        },
+                        {1,1},
+                        0.0,
+                        Draw::deg
+                    ),
+                    Draw::getValueMap(
+                        [](double x, double y) {
+                            return Functions::Square::value(x, y ,0.4);
+                        },
+                        {-1,0.5},
+                        0.0,
+                        Draw::deg
+                    )
+                )
+            )
+        );
+    }  
         return 0;
 }
