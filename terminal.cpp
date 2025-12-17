@@ -381,7 +381,7 @@ int main() {
     //     if(x0 > 1.2) up = false;
     //     if(x0 < -1.2) up = true;
     //     Sleep(10);
-    // }
+    // }                            
 
     while(true){
         player.Control();
