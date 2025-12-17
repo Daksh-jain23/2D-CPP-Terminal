@@ -1,6 +1,11 @@
-#include <bits/stdc++.h>
-#include <ctime>
 #include <windows.h>
+#include <cmath>
+#include <string>
+#include <vector>
+#include <chrono>
+#include <thread>
+#include <iostream>
+#include <functional>
 using namespace std;
 
 const double x_Step = 0.03;
@@ -77,132 +82,196 @@ class Functions {
 
 };
 
-class Draw{
-    inline static double boundary = 1.5;
-    public:
-    
-    static void SetBoundary(double b) {
-        boundary = b;
-    }
-
-    static char shade(double val) {
-        return (val <= 0.0) ? '*' : ' ';
-    }
-
+class CursorController {
+    inline static HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    inline static bool cursorHidden = false;
+public:
     static void RemoveCursor() {
-        HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (cursorHidden) return;
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_CURSOR_INFO info;
-        info.dwSize = 100;
-        info.bVisible = FALSE;
-        SetConsoleCursorInfo(consoleHandle, &info);
+        if (GetConsoleCursorInfo(hConsole, &info)) {
+            CONSOLE_CURSOR_INFO newInfo = info;
+            newInfo.dwSize = 100;
+            newInfo.bVisible = FALSE;
+            SetConsoleCursorInfo(hConsole, &newInfo);
+            cursorHidden = true;
+        }
     }
 
     static void ResetCursor() {
+        if (!hConsole) hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         COORD pos = {0, 0};
-        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
+        SetConsoleCursorPosition(hConsole, pos);
     }
 
-    static pair<double, double> Transform(double x, double y, double tx, double ty) {
-        return {x -tx, y - ty};
+    static void WriteAt(int x, int y, const string& text) {
+        if (!hConsole) hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        COORD pos = {static_cast<SHORT>(x), static_cast<SHORT>(y)};
+        SetConsoleCursorPosition(hConsole, pos);
+        DWORD written = 0;
+        WriteConsoleA(hConsole, text.c_str(), static_cast<DWORD>(text.size()), &written, nullptr);
     }
+};
+
+struct Transform {
+    enum AngleType { deg, rad };
+
+    double centerX = 0.0;
+    double centerY = 0.0;
+    double angle   = 0.0;
+    AngleType type = deg;
+
+    double cosA = 1.0;
+    double sinA = 0.0;
+
+    inline void update() {
+        double a = angle;
+        if (type == deg) a = angle * M_PI / 180.0;
+        cosA = cos(a);
+        sinA = sin(a);
+    }
+
+    inline void apply(double x, double y, double &rx, double &ry) const {
+        double tx = x - centerX;
+        double ty = y - centerY;
+        rx = tx * cosA - ty * sinA;
+        ry = tx * sinA + ty * cosA;
+    }
+};
+
+class Draw{
+    inline static double boundary = 1.5;
+
+    inline static int cols = 0;
+    inline static int rows = 0;
+    inline static vector<double> xs;
+    inline static vector<double> ys;
+    inline static int topBorderLen = 0;
+
+public:
     
-    enum RotationType { deg, rad };
-    static pair<double, double> Rotation(double x, double y, double angle, RotationType s = deg) {
-        if (s == deg) angle = angle * M_PI / 180.0;
+    static void SetBoundary(double b) {
+        boundary = b;
 
-        double x_new = x * cos(angle) - y * sin(angle);
-        double y_new = x * sin(angle) + y * cos(angle);
-        return {x_new, y_new};
+        cols = static_cast<int>(floor((2.0 * boundary) / x_Step)) + 1;
+        rows = static_cast<int>(floor((2.0 * boundary) / y_Step)) + 1;
+        xs.assign(cols, 0.0);
+        ys.assign(rows, 0.0);
+
+        for (int j = 0; j < cols; ++j) {
+            xs[j] = -boundary + j * x_Step;
+        }
+
+        for (int i = 0; i < rows; ++i) {
+            ys[i] = boundary - i * y_Step;
+        }
+        topBorderLen = cols + 2; 
     }
 
-
+    static inline char Shade(double val) {
+        return (val <= 0.0) ? '*' : ' ';
+    }
 
     template<class ShapeType, typename... Args>
-    static void draw(pair<double, double> center, double angle, RotationType s = deg, Args... arg) {
-        ResetCursor();
+    static void draw(const Transform &T, Args... arg) {
+        CursorController::ResetCursor();
 
-        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
-            cout << "=";
+        if (cols == 0 || rows == 0) {
+            SetBoundary(boundary);
         }
-        cout << "=\n";
-        for (double y = boundary; y >= -boundary; y -= y_Step) {
-            cout << "|";
-            for (double x = -boundary; x <= boundary; x += x_Step) {
 
-                auto transformed = Transform(x, y, center.first, center.second);
-                auto rotated = Rotation(transformed.first, transformed.second, angle, s);
-                cout << shade(
-                    ShapeType::value(rotated.first, rotated.second, arg...)
-                );
+        size_t estimated = static_cast<size_t>((cols + 3) * (rows + 2));
+        string output;
+        output.reserve(estimated);
 
+        output.append(topBorderLen, '=');
+        output.append("\n");
+
+        for (int i = 0; i < rows; ++i) {
+            output.push_back('|');
+            double y = ys[i];
+            for (int j = 0; j < cols; ++j) {
+                double x = xs[j];
+
+                pair<double, double> r;
+                T.apply(x, y, r.first, r.second);                
+
+                double v = ShapeType::value(r.first, r.second, arg...);
+                output.push_back(Shade(v));
             }
-            cout << "|\n";
+            output.append("|\n");
         }
-        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
-            cout << "=";
-        }
-        cout << "=\n";
 
-        printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
+        output.append(topBorderLen, '=');
+        output.append("\n");
+
+        CursorController::WriteAt(0, 0, output);
     }
   
-    static void drawFunc(function<double(double, double)> func, pair<double, double> center = {0.0 ,0.0}, double angle = 0.0, RotationType s = deg) {
-        ResetCursor();
+    static void drawFunc(function<double(double, double)> func, const Transform &T) {
+        CursorController::ResetCursor();
 
-        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
-            cout << "=";
+        if (cols == 0 || rows == 0) {
+            SetBoundary(boundary);
         }
-        cout << "=\n";
-        for (double y = boundary; y >= -boundary; y -= y_Step) {
-            cout << "|";
-            for (double x = -boundary; x <= boundary; x += x_Step) {
+        
+        size_t estimated = static_cast<size_t>((cols + 3) * (rows + 2));
+        string output;
+        output.reserve(estimated);
 
-                auto transformed = Transform(x, y, center.first, center.second);
-                auto rotated = Rotation(transformed.first, transformed.second, angle, s);
-                cout << shade(
-                    func(rotated.first, rotated.second)
-                );
+        output.append(topBorderLen, '=');
+        output.append("\n");
 
+        for (int i = 0; i < rows; ++i) {
+            output.push_back('|');
+            double y = ys[i];
+            for (int j = 0; j < cols; ++j) {
+                double x = xs[j];
+
+                pair<double, double> r;
+                T.apply(x, y, r.first, r.second);
+                
+                double v = func(r.first, r.second);
+                output.push_back(Shade(v));
             }
-            cout << "|\n";
+            output.append("|\n");
         }
-        for(double x = -boundary; x <= boundary + x_Step; x += x_Step) {
-            cout << "=";
-        }
-        cout << "=\n";
 
-        printf("Center: (%.2f, %.2f) Angle: %.2f\n", center.first, center.second, angle);
+        output.append(topBorderLen, '=');
+        output.append("\n");
+
+        CursorController::WriteAt(0, 0, output);
     }  
 
 
 
     static vector<vector<double>> getValueMap(
         const function<double(double, double)>& func,
-        pair<double, double> center = {0.0, 0.0},
-        double angle = 0.0,
-        RotationType s = deg
+        const Transform &T
     ) {
+        if (cols == 0 || rows == 0) {
+            SetBoundary(boundary);
+        }
+
         vector<vector<double>> valueMap;
-
-        int rows = static_cast<int>((2 * boundary) / y_Step) + 1;
-        int cols = static_cast<int>((2 * boundary) / x_Step) + 1;
-
         valueMap.reserve(rows);
 
-        for (double y = boundary; y >= -boundary; y -= y_Step) {
-            vector<double> row;
-            row.reserve(cols);
+        vector<double> row;
+        row.resize(cols);
 
-            for (double x = -boundary; x <= boundary; x += x_Step) {
-                auto t = Transform(x, y, center.first, center.second);
-                auto r = Rotation(t.first, t.second, angle, s);
-                row.push_back(func(r.first, r.second));
+        for (int i = 0; i < rows; ++i) {
+            double y = ys[i];
+            for (int j = 0; j < cols; ++j) {
+                double x = xs[j];
+                pair<double, double> r;
+                T.apply(x, y, r.first, r.second);
+                row[j] = func(r.first, r.second);
             }
-            valueMap.push_back(std::move(row));
+            valueMap.emplace_back(row); 
         }
         return valueMap;
     }
-
 
     static vector<vector<double>> MergeValues(
         const vector<vector<double>>& vals1,
@@ -210,64 +279,76 @@ class Draw{
         const function<double(double, double)>& mergeFunc =
             [](double a, double b) { return min(a, b); }
     ) {
-        int rows = vals1.size();
-        int cols = vals1[0].size();
 
-        vector<vector<double>> merged(rows, vector<double>(cols));
+        int rowsLocal = static_cast<int>(vals1.size());
+        if (rowsLocal == 0) return {};
+        int colsLocal = static_cast<int>(vals1[0].size());
 
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
+        vector<vector<double>> merged(rowsLocal, vector<double>(colsLocal));
+
+        for (int i = 0; i < rowsLocal; i++) {
+            for (int j = 0; j < colsLocal; j++) {
                 merged[i][j] = mergeFunc(vals1[i][j], vals2[i][j]);
             }
         }
         return merged;
     }
 
-
     static void drawByValue(const vector<vector<double>>& values) {
-        ResetCursor();
+        CursorController::ResetCursor();
 
-        int rows = values.size();
-        int cols = values[0].size();
-    
-        cout << "+";
-        for (int j = 0; j < cols; j++) cout << "-";
-        cout << "+\n";
-
-        for (int i = 0; i < rows; i++) {
-            cout << "|";
-            for (int j = 0; j < cols; j++) {
-                cout << shade(values[i][j]);
-            }
-            cout << "|\n";
+        if (cols == 0 || rows == 0) {
+            SetBoundary(boundary);
         }
 
-        cout << "+";
-        for (int j = 0; j < cols; j++) cout << "-";
-        cout << "+\n";
+        if (values.empty()) return;
+        int rowsLocal = static_cast<int>(values.size());
+        int colsLocal = static_cast<int>(values[0].size());
+        
+        size_t estimated = static_cast<size_t>((colsLocal + 3) * (rowsLocal + 2));
+        string output;
+        output.reserve(estimated);
+
+        output.append(colsLocal + 2, '=');
+        output.append("\n");
+
+        for (int i = 0; i < rowsLocal; ++i) {
+            output.push_back('|');
+            const auto &row = values[i];
+            for (int j = 0; j < colsLocal; ++j) {
+                output.push_back(Shade(row[j]));
+            }
+            output.append("|\n");
+        }
+
+        output.append(colsLocal + 2, '=');
+        output.append("\n");
+
+        CursorController::WriteAt(0, 0, output);
     }
 
+};
 
 
-    class FunAnimation {
-        public:
-
-        static void HeartPopPop(){
-            SetBoundary(1.5);
-            RemoveCursor();
-            double size = 0.7;
-            bool up = true;
-            while(true){
-                Draw::drawFunc([&](double x, double y) { 
-                    return Functions::Heart::value(x, y, 1, size, size); 
-                });
-                if(up) size += 0.05;
-                else size -= 0.05;
-                if(size > 1) up = false;
-                if(size < 0.7) up = true;
-            }
+class FunAnimation {
+public:
+    static void HeartPopPop(){
+    Draw::SetBoundary(1.5);
+    CursorController::RemoveCursor();
+    double size = 0.7;
+    bool up = true;
+    Transform T;
+    while(true){         
+        Draw::drawFunc([&](double x, double y) { 
+            return Functions::Heart::value(x, y, 1, size, size); 
+        }, T);
+        if(up) size += 0.05;
+        else size -= 0.05;
+        if(size > 1) up = false;
+        if(size < 0.7) up = true;
+        Sleep(50);
         }
-    };
+    }
 };
 
 class Player {
@@ -276,21 +357,30 @@ class Player {
 public:
     Player() : x(0.0), y(0.0), angle(0.0) {}
 
-    void move(double dx, double dy) {
+    void inline move(double dx, double dy) {
         x += dx;
         y += dy;
     }
 
-    void rotate(double dAngle) {
+    void inline rotate(double dAngle) {
         angle += dAngle;
     }
 
-    pair<double, double> getPosition() const {
+    pair<double, double> inline getPosition() const {
         return {x, y};
     }
 
-    double getAngle() const {
+    double inline getAngle() const {
         return angle;
+    }
+
+    Transform inline getTransform() const {
+        return Transform{
+            x,
+            y,
+            angle,
+            Transform::deg
+        };
     }
 
     void Control() {
@@ -321,7 +411,7 @@ public:
 
 int main() {
     Draw::SetBoundary(1.5);
-    Draw::RemoveCursor();
+    CursorController::RemoveCursor();
 
     Player player;
     double x0 = 0.0, y0 = 0.0;
@@ -356,39 +446,39 @@ int main() {
 
     while(true){
         player.Control();
-        auto pos = player.getPosition(); 
-        double angle = player.getAngle();
-
+        Transform playerTransform = player.getTransform();
+        playerTransform.update();
         Draw::drawByValue(
             Draw::MergeValues(
                 Draw::getValueMap(
                     [](double x, double y) {
                         return Functions::Circle::value(x, y, 0.5);
                     },
-                    pos,
-                    angle,
-                    Draw::deg
+                    playerTransform
                 ),
                 Draw::MergeValues(
                    Draw::getValueMap(
                         [](double x, double y) {
                             return Functions::Square::value(x, y, 0.4);
                         },
-                        {1,1},
-                        0.0,
-                        Draw::deg
+                        Transform{1, 1}
                     ),
                     Draw::getValueMap(
                         [](double x, double y) {
                             return Functions::Square::value(x, y ,0.4);
                         },
-                        {-1,0.5},
-                        0.0,
-                        Draw::deg
+                        Transform{-1, 0.5}
                     )
                 )
             )
         );
+
+        printf("Position: (%.2f, %.2f) Angle: %.2f deg\n", 
+            player.getPosition().first,
+            player.getPosition().second,
+            player.getAngle()
+        );
+        Sleep(50);
     }  
-        return 0;
+    return 0;
 }
