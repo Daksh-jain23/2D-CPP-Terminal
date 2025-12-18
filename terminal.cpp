@@ -386,7 +386,7 @@ public:
     bool gravityOn = true;
     static constexpr double gravity = -9.8;
 
-    double elasticity = 0.0;
+    double elasticity = 0.10;
 
     explicit RigidBody(ShapeFunc func, double m)
     : bodyFunction(func){
@@ -403,6 +403,58 @@ public:
         force += {x, y};
     }
 
+
+    void CollisionBoundary(Transform &t) {
+        const double eps = 0.1;
+        double rx, ry;
+        
+        // -------- TOP & BOTTOM --------
+        for (int i = 0; i < Draw::cols; ++i) {
+            double x = Draw::xs[i];
+
+            // Top
+            t.apply(x, Draw::boundary, rx, ry);
+            if (bodyFunction(rx, ry) <= 0) {
+                t.posn.y -= eps;
+                if(velocity.y > 0)
+                    velocity.y *= -elasticity;
+                break;
+            }
+
+            // Bottom
+            t.apply(x, -Draw::boundary, rx, ry);
+            if (bodyFunction(rx, ry) <= 0) {
+                t.posn.y += eps;
+                if(velocity.y < 0)
+                    velocity.y *= -elasticity;
+                break;
+            }
+        }
+
+        // -------- LEFT & RIGHT --------
+        for (int i = 0; i < Draw::rows; ++i) {
+            double y = Draw::ys[i];
+
+            // Left
+            t.apply(-Draw::boundary, y, rx, ry);
+            if (bodyFunction(rx, ry) <= 0) {
+                t.posn.x += eps;
+                if(velocity.x < 0)
+                    velocity.x *= -elasticity;
+                break;
+            }
+
+            // Right
+            t.apply(Draw::boundary, y, rx, ry);
+            if (bodyFunction(rx, ry) <= 0) {
+                t.posn.x -= eps;
+                if(velocity.x > 0)
+                    velocity.x *= -elasticity;
+                break;
+            }
+        }
+    }
+
     void integrate(Transform& t, double dt) {
         if (gravityOn)
             addForce(0, mass * gravity);
@@ -411,7 +463,7 @@ public:
 
         velocity += acc * dt;
 
-        CollisionBoundary();
+        CollisionBoundary(t);
 
         t.posn += velocity * dt;
         t.angle += angularVelocity * dt;
@@ -419,7 +471,7 @@ public:
 
         force = {0.0, 0.0};
     }
-
+    
 
 };
 
@@ -547,8 +599,8 @@ int main() {
         player.Control();
         player.update(dt);
 
-        Sleep(10);
-
+        Sleep(60);
+        printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
     }
     return 0;
 }
