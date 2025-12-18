@@ -114,33 +114,53 @@ public:
     }
 };
 
+struct Vec2 {
+    double x = 0.0;
+    double y = 0.0;
+
+    Vec2() = default;
+    Vec2(double x_, double y_) : x(x_), y(y_) {}
+
+    Vec2 operator+(const Vec2& o) const { return {x + o.x, y + o.y}; }
+    Vec2 operator-(const Vec2& o) const { return {x - o.x, y - o.y}; }
+    Vec2 operator*(double s) const { return {x * s, y * s}; }
+
+    Vec2& operator+=(const Vec2& o) { x += o.x; y += o.y; return *this; }
+};
+
+
 struct Transform {
     enum AngleType { deg, rad };
 
-    double centerX = 0.0;
-    double centerY = 0.0;
+    Vec2 posn;
     double angle   = 0.0;
     AngleType type = deg;
 
     double cosA = 1.0;
     double sinA = 0.0;
 
-    inline void update() {
+    void update() {
         double a = angle;
-        if (type == deg) a = angle * M_PI / 180.0;
+        if (type == deg) {
+            if(angle < 0) angle += 360;
+            if(angle > 360) angle -= 360;
+            a = angle * M_PI / 180.0;
+        }
         cosA = cos(a);
         sinA = sin(a);
     }
 
-    inline void apply(double x, double y, double &rx, double &ry) const {
-        double tx = x - centerX;
-        double ty = y - centerY;
+    inline void apply(double xt, double yt, double &rx, double &ry) const {
+        double tx = xt - posn.x;
+        double ty = yt - posn.y;
         rx = tx * cosA - ty * sinA;
         ry = tx * sinA + ty * cosA;
     }
 };
 
+
 class Draw{
+    public:
     inline static double boundary = 1.5;
 
     inline static int cols = 0;
@@ -148,8 +168,7 @@ class Draw{
     inline static vector<double> xs;
     inline static vector<double> ys;
     inline static int topBorderLen = 0;
-
-public:
+  
     
     static void SetBoundary(double b) {
         boundary = b;
@@ -172,6 +191,7 @@ public:
     static inline char Shade(double val) {
         return (val <= 0.0) ? '*' : ' ';
     }
+
 
     template<class ShapeType, typename... Args>
     static void draw(const Transform &T, Args... arg) {
@@ -209,7 +229,8 @@ public:
         CursorController::WriteAt(0, 0, output);
     }
   
-    static void drawFunc(function<double(double, double)> func, const Transform &T) {
+    template<typename Func>
+    static void drawFunc(Func&& func, const Transform& T) {
         CursorController::ResetCursor();
 
         if (cols == 0 || rows == 0) {
@@ -245,11 +266,11 @@ public:
     }  
 
 
-
+    template<typename Func>
     static vector<vector<double>> getValueMap(
-        const function<double(double, double)>& func,
-        const Transform &T
-    ) {
+    Func&& func,
+    const Transform& T
+){
         if (cols == 0 || rows == 0) {
             SetBoundary(boundary);
         }
@@ -273,11 +294,11 @@ public:
         return valueMap;
     }
 
+    template<typename MergeFunc>
     static vector<vector<double>> MergeValues(
         const vector<vector<double>>& vals1,
         const vector<vector<double>>& vals2,
-        const function<double(double, double)>& mergeFunc =
-            [](double a, double b) { return min(a, b); }
+        MergeFunc&& mergeFunc = [](double a, double b){return min(a,b);}
     ) {
 
         int rowsLocal = static_cast<int>(vals1.size());
@@ -329,7 +350,6 @@ public:
 
 };
 
-
 class FunAnimation {
 public:
     static void HeartPopPop(){
@@ -351,69 +371,107 @@ public:
     }
 };
 
-class Player {
-    double x, y;
-    double angle;
+template<typename ShapeFunc>
+class RigidBody {
 public:
-    Player() : x(0.0), y(0.0), angle(0.0) {}
+    ShapeFunc bodyFunction;
 
-    void inline move(double dx, double dy) {
-        x += dx;
-        y += dy;
+    double mass;
+    double invMass;
+    Vec2 velocity;
+    double angularVelocity = 0.0;
+
+    Vec2 force;
+
+    bool gravityOn = true;
+    static constexpr double gravity = -9.8;
+
+    double elasticity = 0.0;
+
+    explicit RigidBody(ShapeFunc func, double m)
+    : bodyFunction(func){
+        if (m <= 0.0) {
+            std::cerr << "Mass must be positive\n";
+            m = 1.0;
+        }
+        mass = m;
+        invMass = 1.0 / mass;
+
     }
 
-    void inline rotate(double dAngle) {
-        angle += dAngle;
+    inline void addForce(double x, double y) {
+        force += {x, y};
     }
 
-    pair<double, double> inline getPosition() const {
-        return {x, y};
+    void integrate(Transform& t, double dt) {
+        if (gravityOn)
+            addForce(0, mass * gravity);
+
+        Vec2 acc = force * invMass;
+
+        velocity += acc * dt;
+
+        CollisionBoundary();
+
+        t.posn += velocity * dt;
+        t.angle += angularVelocity * dt;
+
+
+        force = {0.0, 0.0};
     }
 
-    double inline getAngle() const {
-        return angle;
-    }
 
-    Transform inline getTransform() const {
-        return Transform{
-            x,
-            y,
-            angle,
-            Transform::deg
-        };
+};
+
+
+template<typename ShapeFunc>
+class Entity {
+public:
+    Transform transform;
+    RigidBody<ShapeFunc> rigidbody;
+
+    Entity(ShapeFunc bodyFunction, double mass = 1.0)
+        : rigidbody(bodyFunction, mass) {}
+
+    void update(double dt) {
+        rigidbody.integrate(transform, dt);
+        transform.update();
     }
 
     void Control() {
         if (GetAsyncKeyState(VK_LEFT) || GetAsyncKeyState('A')) {
-            x -= 0.1;
+            rigidbody.addForce(-10, 0);
         }
         if (GetAsyncKeyState(VK_RIGHT) || GetAsyncKeyState('D')) {
-            x += 0.1;
+            rigidbody.addForce(10, 0);
         }
         if (GetAsyncKeyState(VK_UP) || GetAsyncKeyState('W')) {
-            y += 0.1;
+            rigidbody.addForce(0, 20);
         }
         if (GetAsyncKeyState(VK_DOWN) || GetAsyncKeyState('S')) {
-            y -= 0.1;
+           rigidbody.addForce(0, -20);
         }
         if (GetAsyncKeyState('Q')) {
-            angle -= 5.0;
-            if(angle < 0.0) angle += 360.0;
+            transform.angle -= 5.0;
+            if(transform.angle < 0) transform.angle += 360;
         }
         if (GetAsyncKeyState('E')) {
-            angle += 5.0;
-            if(angle >= 360.0) angle -= 360.0;
+            transform.angle += 5.0;
+            if(transform.angle > 360) transform.angle -= 360;
         }
     }
 };
 
 
-
 int main() {
     Draw::SetBoundary(1.5);
     CursorController::RemoveCursor();
+    Entity player(
+        [](double x, double y){
+            return Functions::Circle::value(x, y, 0.5);
+        }, -1
+    );
 
-    Player player;
     double x0 = 0.0, y0 = 0.0;
     double angle = 0.0;
     double size = 0.7;
@@ -442,43 +500,55 @@ int main() {
     //     double angle = player.getAngle();
     // }
 
-    // Draw::FunAnimation::HeartPopPop();
+    // FunAnimation::HeartPopPop();
 
+    // double lastTime = static_cast<double>(GetTickCount64());
+    // while(true){
+    //     double currentTime = static_cast<double>(GetTickCount64());
+    //     double dt = (currentTime - lastTime) / 1000.0;
+    //     lastTime = currentTime;
+    //     player.Control();
+
+    //     Transform playerTransform = player.transform;
+    //     player.update(dt);
+    //     Draw::drawByValue(
+    //         Draw::MergeValues(
+    //             Draw::getValueMap(
+    //                 [](double x, double y) {
+    //                     return Functions::Circle::value(x, y, 0.5);
+    //                 },
+    //                 playerTransform
+    //             ),
+    //             Draw::MergeValues(
+    //                Draw::getValueMap(
+    //                     [](double x, double y) {
+    //                         return Functions::Square::value(x, y, 0.4);
+    //                     },
+    //                     Transform{{1, 1}}
+    //                 ),
+    //                 Draw::getValueMap(
+    //                     [](double x, double y) {
+    //                         return Functions::Square::value(x, y ,0.4);
+    //                     },
+    //                     Transform{{-1, 0.5}}
+    //                 )
+    //             )
+    //         )
+    //     );
+    //     printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
+    // }  
+
+    double lastTime = static_cast<double>(GetTickCount64());
     while(true){
+        double currentTime = static_cast<double>(GetTickCount64());
+        double dt = (currentTime - lastTime) / 1000.0;
+        lastTime = currentTime;
+        Draw::draw<Functions::Circle>(player.transform, 0.5);
         player.Control();
-        Transform playerTransform = player.getTransform();
-        playerTransform.update();
-        Draw::drawByValue(
-            Draw::MergeValues(
-                Draw::getValueMap(
-                    [](double x, double y) {
-                        return Functions::Circle::value(x, y, 0.5);
-                    },
-                    playerTransform
-                ),
-                Draw::MergeValues(
-                   Draw::getValueMap(
-                        [](double x, double y) {
-                            return Functions::Square::value(x, y, 0.4);
-                        },
-                        Transform{1, 1}
-                    ),
-                    Draw::getValueMap(
-                        [](double x, double y) {
-                            return Functions::Square::value(x, y ,0.4);
-                        },
-                        Transform{-1, 0.5}
-                    )
-                )
-            )
-        );
+        player.update(dt);
 
-        printf("Position: (%.2f, %.2f) Angle: %.2f deg\n", 
-            player.getPosition().first,
-            player.getPosition().second,
-            player.getAngle()
-        );
-        Sleep(50);
-    }  
+        Sleep(10);
+
+    }
     return 0;
 }
