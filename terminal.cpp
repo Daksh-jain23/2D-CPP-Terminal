@@ -126,6 +126,15 @@ struct Vec2 {
     Vec2 operator*(double s) const { return {x * s, y * s}; }
 
     Vec2& operator+=(const Vec2& o) { x += o.x; y += o.y; return *this; }
+
+    friend ostream& operator<<(ostream &out, Vec2 &v){
+        out << v.x << ", " << v.y;
+        return out;
+    }  
+    
+    friend double abs(Vec2 &v){
+        return pow(v.x * v.x + v.y * v.y, 0.5);
+    }
 };
 
 
@@ -386,7 +395,7 @@ public:
     bool gravityOn = true;
     static constexpr double gravity = -9.8;
 
-    double elasticity = 0.10;
+    double elasticity = 1;
 
     explicit RigidBody(ShapeFunc func, double m)
     : bodyFunction(func){
@@ -396,7 +405,6 @@ public:
         }
         mass = m;
         invMass = 1.0 / mass;
-
     }
 
     inline void addForce(double x, double y) {
@@ -405,7 +413,7 @@ public:
 
 
     void CollisionBoundary(Transform &t) {
-        const double eps = 0.1;
+        const double eps = 0.01;
         double rx, ry;
         
         // -------- TOP & BOTTOM --------
@@ -416,8 +424,10 @@ public:
             t.apply(x, Draw::boundary, rx, ry);
             if (bodyFunction(rx, ry) <= 0) {
                 t.posn.y -= eps;
-                if(velocity.y > 0)
-                    velocity.y *= -elasticity;
+
+                if (velocity.y > 0) 
+                    velocity.y = -velocity.y * elasticity;        
+              
                 break;
             }
 
@@ -425,8 +435,10 @@ public:
             t.apply(x, -Draw::boundary, rx, ry);
             if (bodyFunction(rx, ry) <= 0) {
                 t.posn.y += eps;
-                if(velocity.y < 0)
-                    velocity.y *= -elasticity;
+
+                if (velocity.y < 0) 
+                    velocity.y = -velocity.y * elasticity;
+
                 break;
             }
         }
@@ -461,14 +473,13 @@ public:
 
         Vec2 acc = force * invMass;
 
+        
         velocity += acc * dt;
-
-        CollisionBoundary(t);
-
+        
         t.posn += velocity * dt;
         t.angle += angularVelocity * dt;
-
-
+        
+        CollisionBoundary(t);
         force = {0.0, 0.0};
     }
     
@@ -589,18 +600,19 @@ int main() {
     //     );
     //     printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
     // }  
-
+    player.rigidbody.gravityOn = true;
     double lastTime = static_cast<double>(GetTickCount64());
     while(true){
         double currentTime = static_cast<double>(GetTickCount64());
         double dt = (currentTime - lastTime) / 1000.0;
         lastTime = currentTime;
-        Draw::draw<Functions::Circle>(player.transform, 0.5);
         player.Control();
         player.update(dt);
+        Draw::draw<Functions::Circle>(player.transform, 0.5);
 
-        Sleep(60);
-        printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
+        Sleep(16);
+        printf("Player Posn : %.2f, %.2f\n", player.transform.posn.x, player.transform.posn.y);
+        cout << "Velocity - " << player.rigidbody.velocity; 
     }
     return 0;
 }
