@@ -303,27 +303,41 @@ class Draw{
         return valueMap;
     }
 
-    template<typename MergeFunc>
-    static vector<vector<double>> MergeValues(
-        const vector<vector<double>>& vals1,
-        const vector<vector<double>>& vals2,
-        MergeFunc&& mergeFunc = [](double a, double b){return min(a,b);}
+    
+    template<typename MergeFunc, typename... Grids>
+    static vector<vector<double>> MergeValuesImpl(
+        MergeFunc&& mergeFunc,
+        const vector<vector<double>>& first,
+        const Grids&... rest
     ) {
+        int rows = first.size();
+        if (rows == 0) return {};
+        int cols = first[0].size();
 
-        int rowsLocal = static_cast<int>(vals1.size());
-        if (rowsLocal == 0) return {};
-        int colsLocal = static_cast<int>(vals1[0].size());
+        vector<vector<double>> merged = first;
 
-        vector<vector<double>> merged(rowsLocal, vector<double>(colsLocal));
+        auto apply = [&](const vector<vector<double>>& g) {
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                    merged[i][j] = mergeFunc(merged[i][j], g[i][j]);
+        };
 
-        for (int i = 0; i < rowsLocal; i++) {
-            for (int j = 0; j < colsLocal; j++) {
-                merged[i][j] = mergeFunc(vals1[i][j], vals2[i][j]);
-            }
-        }
+        (apply(rest), ...);
+
         return merged;
     }
+    template<typename... Grids>
+    static std::vector<std::vector<double>> MergeValues(
+        const std::vector<std::vector<double>>& first,
+        const Grids&... rest
+    ) {
+        return MergeValuesImpl(
+            [](double a, double b){ return std::min(a, b); },
+            first, rest...
+        );
+    }
 
+    
     static void drawByValue(const vector<vector<double>>& values) {
         CursorController::ResetCursor();
 
@@ -395,7 +409,13 @@ public:
     bool gravityOn = true;
     static constexpr double gravity = -9.8;
 
-    double elasticity = 1;
+    double elasticity = 0.8;
+
+    bool leftBoundary = true;
+    bool rightBoundary = true;
+    bool topBoundary = true;
+    bool bottomBoundary = true;
+
 
     explicit RigidBody(ShapeFunc func, double m)
     : bodyFunction(func){
@@ -411,58 +431,60 @@ public:
         force += {x, y};
     }
 
-
     void CollisionBoundary(Transform &t, double dt) {
         const double eps = 0.01;
         double rx, ry;
-        
-        // -------- TOP & BOTTOM --------
+
         for (int i = 0; i < Draw::cols; ++i) {
             double x = Draw::xs[i];
 
-            // Top
-            t.apply(x, Draw::boundary, rx, ry);
-            if (bodyFunction(rx, ry) <= 0) {
-                t.posn.y -= eps;
+            if(topBoundary){
+                t.apply(x, Draw::boundary, rx, ry);
+                if (bodyFunction(rx, ry) <= 0) {
+                    t.posn.y -= eps;
 
-                if (velocity.y > 0) 
-                    velocity.y = -(velocity.y +  force.y * dt) * elasticity;        
-              
-                break;
+                    if (velocity.y > 0) 
+                        velocity.y = -(velocity.y +  force.y * dt) * elasticity;        
+                
+                    break;
+                }   
             }
 
-            // Bottom
-            t.apply(x, -Draw::boundary, rx, ry);
-            if (bodyFunction(rx, ry) <= 0) {
-                t.posn.y += eps;
+            if(bottomBoundary){
+                t.apply(x, -Draw::boundary, rx, ry);
+                if (bodyFunction(rx, ry) <= 0) {
+                    t.posn.y += eps;
 
-                if (velocity.y < 0) 
-                    velocity.y = -(velocity.y +  force.y * dt) * elasticity;
+                    if (velocity.y < 0) 
+                        velocity.y = -(velocity.y +  force.y * dt) * elasticity;
 
-                break;
+                    break;
+                }
             }
         }
 
-        // -------- LEFT & RIGHT --------
+
         for (int i = 0; i < Draw::rows; ++i) {
             double y = Draw::ys[i];
 
-            // Left
-            t.apply(-Draw::boundary, y, rx, ry);
-            if (bodyFunction(rx, ry) <= 0) {
-                t.posn.x += eps;
-                if(velocity.x < 0)
-                    velocity.x = -(velocity.x +  force.x * dt) * elasticity;
-                break;
+            if(leftBoundary){
+                t.apply(-Draw::boundary, y, rx, ry);
+                if (bodyFunction(rx, ry) <= 0) {
+                    t.posn.x += eps;
+                    if(velocity.x < 0)
+                        velocity.x = -(velocity.x +  force.x * dt) * elasticity;
+                    break;
+                }
             }
-
-            // Right
-            t.apply(Draw::boundary, y, rx, ry);
-            if (bodyFunction(rx, ry) <= 0) {
-                t.posn.x -= eps;
-                if(velocity.x > 0)
-                    velocity.x = -(velocity.x +  force.x * dt) * elasticity;
-                break;
+            
+            if(rightBoundary){
+                t.apply(Draw::boundary, y, rx, ry);
+                if (bodyFunction(rx, ry) <= 0) {
+                    t.posn.x -= eps;
+                    if(velocity.x > 0)
+                        velocity.x = -(velocity.x +  force.x * dt) * elasticity;
+                    break;
+                }
             }
         }
     }
@@ -565,56 +587,54 @@ int main() {
 
     // FunAnimation::HeartPopPop();
 
-    // double lastTime = static_cast<double>(GetTickCount64());
-    // while(true){
-    //     double currentTime = static_cast<double>(GetTickCount64());
-    //     double dt = (currentTime - lastTime) / 1000.0;
-    //     lastTime = currentTime;
-    //     player.Control();
-
-    //     Transform playerTransform = player.transform;
-    //     player.update(dt);
-    //     Draw::drawByValue(
-    //         Draw::MergeValues(
-    //             Draw::getValueMap(
-    //                 [](double x, double y) {
-    //                     return Functions::Circle::value(x, y, 0.5);
-    //                 },
-    //                 playerTransform
-    //             ),
-    //             Draw::MergeValues(
-    //                Draw::getValueMap(
-    //                     [](double x, double y) {
-    //                         return Functions::Square::value(x, y, 0.4);
-    //                     },
-    //                     Transform{{1, 1}}
-    //                 ),
-    //                 Draw::getValueMap(
-    //                     [](double x, double y) {
-    //                         return Functions::Square::value(x, y ,0.4);
-    //                     },
-    //                     Transform{{-1, 0.5}}
-    //                 )
-    //             )
-    //         )
-    //     );
-    //     printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
-    // }  
-    double maxv = 0, minv = 0;
-    player.rigidbody.gravityOn = true;
     double lastTime = static_cast<double>(GetTickCount64());
     while(true){
-        Sleep(16);
         double currentTime = static_cast<double>(GetTickCount64());
         double dt = (currentTime - lastTime) / 1000.0;
         lastTime = currentTime;
         player.Control();
-        player.update(dt);
-        Draw::draw<Functions::Circle>(player.transform, 0.5);
 
-        printf("Player Posn : %.2f, %.2f\n", player.transform.posn.x, player.transform.posn.y);
-        cout << "Velocity - " << player.rigidbody.velocity << endl; 
+        Transform playerTransform = player.transform;
+        player.update(dt);
+        Draw::drawByValue(
+            Draw::MergeValues(
+                Draw::getValueMap(
+                    [](double x, double y) {
+                        return Functions::Circle::value(x, y, 0.5);
+                    },
+                    playerTransform
+                ),
+                Draw::getValueMap(
+                    [](double x, double y) {
+                        return Functions::Square::value(x, y, 0.4);
+                    },
+                    Transform{{1, 1}}
+                ),
+                Draw::getValueMap(
+                    [](double x, double y) {
+                        return Functions::Square::value(x, y ,0.4);
+                    },
+                    Transform{{-1, 0.5}}
+                )
+            )
+        );
+        printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
+    }  
+    // double maxv = 0, minv = 0;
+    // player.rigidbody.gravityOn = true;
+    // double lastTime = static_cast<double>(GetTickCount64());
+    // while(true){
+    //     Sleep(16);
+    //     double currentTime = static_cast<double>(GetTickCount64());
+    //     double dt = (currentTime - lastTime) / 1000.0;
+    //     lastTime = currentTime;
+    //     player.Control();
+    //     player.update(dt);
+    //     Draw::draw<Functions::Circle>(player.transform, 0.5);
+
+    //     printf("Player Posn : %.2f, %.2f\n", player.transform.posn.x, player.transform.posn.y);
+    //     cout << "Velocity - " << player.rigidbody.velocity << endl; 
         
-    }
+    // }
     return 0;
 }
