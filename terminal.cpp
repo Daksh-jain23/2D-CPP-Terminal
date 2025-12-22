@@ -412,7 +412,7 @@ public:
     }
 
 
-    void CollisionBoundary(Transform &t) {
+    void CollisionBoundary(Transform &t, double dt) {
         const double eps = 0.01;
         double rx, ry;
         
@@ -426,7 +426,7 @@ public:
                 t.posn.y -= eps;
 
                 if (velocity.y > 0) 
-                    velocity.y = -velocity.y * elasticity;        
+                    velocity.y = -(velocity.y +  force.y * dt) * elasticity;        
               
                 break;
             }
@@ -437,7 +437,7 @@ public:
                 t.posn.y += eps;
 
                 if (velocity.y < 0) 
-                    velocity.y = -velocity.y * elasticity;
+                    velocity.y = -(velocity.y +  force.y * dt) * elasticity;
 
                 break;
             }
@@ -452,7 +452,7 @@ public:
             if (bodyFunction(rx, ry) <= 0) {
                 t.posn.x += eps;
                 if(velocity.x < 0)
-                    velocity.x *= -elasticity;
+                    velocity.x = -(velocity.x +  force.x * dt) * elasticity;
                 break;
             }
 
@@ -461,25 +461,25 @@ public:
             if (bodyFunction(rx, ry) <= 0) {
                 t.posn.x -= eps;
                 if(velocity.x > 0)
-                    velocity.x *= -elasticity;
+                    velocity.x = -(velocity.x +  force.x * dt) * elasticity;
                 break;
             }
         }
     }
 
     void integrate(Transform& t, double dt) {
+        
         if (gravityOn)
             addForce(0, mass * gravity);
-
         Vec2 acc = force * invMass;
-
+        
         
         velocity += acc * dt;
         
         t.posn += velocity * dt;
         t.angle += angularVelocity * dt;
         
-        CollisionBoundary(t);
+        CollisionBoundary(t,dt);
         force = {0.0, 0.0};
     }
     
@@ -600,9 +600,11 @@ int main() {
     //     );
     //     printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
     // }  
+    double maxv = 0, minv = 0;
     player.rigidbody.gravityOn = true;
     double lastTime = static_cast<double>(GetTickCount64());
     while(true){
+        Sleep(16);
         double currentTime = static_cast<double>(GetTickCount64());
         double dt = (currentTime - lastTime) / 1000.0;
         lastTime = currentTime;
@@ -610,9 +612,9 @@ int main() {
         player.update(dt);
         Draw::draw<Functions::Circle>(player.transform, 0.5);
 
-        Sleep(16);
         printf("Player Posn : %.2f, %.2f\n", player.transform.posn.x, player.transform.posn.y);
-        cout << "Velocity - " << player.rigidbody.velocity; 
+        cout << "Velocity - " << player.rigidbody.velocity << endl; 
+        
     }
     return 0;
 }
