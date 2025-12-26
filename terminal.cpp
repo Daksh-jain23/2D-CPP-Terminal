@@ -2,6 +2,7 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <list>
 #include <chrono>
 #include <thread>
 #include <iostream>
@@ -504,23 +505,45 @@ public:
         CollisionBoundary(t,dt);
         force = {0.0, 0.0};
     }
-    
 
 };
 
+class Entity;
 
-template<typename ShapeFunc>
+class Entities {
+public:
+    static list<Entity*> entities;
+};
+list<Entity*> Entities::entities;
+
 class Entity {
 public:
     Transform transform;
-    RigidBody<ShapeFunc> rigidbody;
+    RigidBody<std::function<double(double,double)>> rigidbody;
 
-    Entity(ShapeFunc bodyFunction, double mass = 1.0)
-        : rigidbody(bodyFunction, mass) {}
+    bool isCollidable = true;
+    bool isStatic = false;
 
+    Entity(
+        std::function<double(double,double)> bodyFunction,
+        double mass = 1.0,
+        bool collidable = true,
+        bool isStatic_ = false
+    )
+        : rigidbody(bodyFunction, isStatic_ ? 0.0 : mass),
+          isCollidable(collidable),
+          isStatic(isStatic_) {
+            Entities::entities.emplace_back(this);
+        }
+    
+    ~Entity(){
+        Entities::entities.remove(this);
+    }
     void update(double dt) {
-        rigidbody.integrate(transform, dt);
-        transform.update();
+        if (!isStatic) {
+            rigidbody.integrate(transform, dt);
+            transform.update();
+        }
     }
 
     void Control() {
@@ -548,93 +571,4 @@ public:
 };
 
 
-int main() {
-    Draw::SetBoundary(1.5);
-    CursorController::RemoveCursor();
-    Entity player(
-        [](double x, double y){
-            return Functions::Circle::value(x, y, 0.5);
-        }, -1
-    );
 
-    double x0 = 0.0, y0 = 0.0;
-    double angle = 0.0;
-    double size = 0.7;
-    bool up = true;
-
-    // while(true){
-    //     Draw::draw<Functions::Heart>({x0,y0}, angle, Draw::deg, 1.0, 0.5, 0.5);
-    //     angle += 10.0;
-    //     if(angle > 360.0) angle -= 360.0;
-    //         x0 += 0.1;
-    //         y0 += 0.1;
-    //     }
-    //     else{
-    //         x0 -= 0.1;
-    //         y0 -= 0.1;
-    //     }
-
-    //     if(x0 > 1.2) up = false;
-    //     if(x0 < -1.2) up = true;
-    //     Sleep(10);
-    // }                            
-
-    // while(true){
-    //     player.Control();
-    //     auto pos = player.getPosition(); 
-    //     double angle = player.getAngle();
-    // }
-
-    // FunAnimation::HeartPopPop();
-
-    double lastTime = static_cast<double>(GetTickCount64());
-    while(true){
-        double currentTime = static_cast<double>(GetTickCount64());
-        double dt = (currentTime - lastTime) / 1000.0;
-        lastTime = currentTime;
-        player.Control();
-
-        Transform playerTransform = player.transform;
-        player.update(dt);
-        Draw::drawByValue(
-            Draw::MergeValues(
-                Draw::getValueMap(
-                    [](double x, double y) {
-                        return Functions::Circle::value(x, y, 0.5);
-                    },
-                    playerTransform
-                ),
-                Draw::getValueMap(
-                    [](double x, double y) {
-                        return Functions::Square::value(x, y, 0.4);
-                    },
-                    Transform{{1, 1}}
-                ),
-                Draw::getValueMap(
-                    [](double x, double y) {
-                        return Functions::Square::value(x, y ,0.4);
-                    },
-                    Transform{{-1, 0.5}}
-                )
-            )
-        );
-        printf("Player Posn : %.2f, %.2f", player.transform.posn.x, player.transform.posn.y);
-    }  
-    // double maxv = 0, minv = 0;
-    // player.rigidbody.gravityOn = true;
-    // double lastTime = static_cast<double>(GetTickCount64());
-    // while(true){
-    //     Sleep(16);
-    //     double currentTime = static_cast<double>(GetTickCount64());
-    //     double dt = (currentTime - lastTime) / 1000.0;
-    //     lastTime = currentTime;
-    //     player.Control();
-    //     player.update(dt);
-    //     Draw::draw<Functions::Circle>(player.transform, 0.5);
-
-    //     printf("Player Posn : %.2f, %.2f\n", player.transform.posn.x, player.transform.posn.y);
-    //     cout << "Velocity - " << player.rigidbody.velocity << endl; 
-        
-    // }
-    return 0;
-}
