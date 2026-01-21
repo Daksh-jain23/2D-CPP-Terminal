@@ -1,0 +1,1 @@
+enum AngleType { deg, rad };
