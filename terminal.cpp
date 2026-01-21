@@ -377,20 +377,20 @@ class Draw{
 class FunAnimation {
 public:
     static void HeartPopPop(){
-    Draw::SetBoundary(1.5);
-    CursorController::RemoveCursor();
-    double size = 0.7;
-    bool up = true;
-    Transform T;
-    while(true){         
-        Draw::drawFunc([&](double x, double y) { 
-            return Functions::Heart::value(x, y, 1, size, size); 
-        }, T);
-        if(up) size += 0.05;
-        else size -= 0.05;
-        if(size > 1) up = false;
-        if(size < 0.7) up = true;
-        Sleep(50);
+        Draw::SetBoundary(1.5);
+        CursorController::RemoveCursor();
+        double size = 0.7;
+        bool up = true;
+        Transform T;
+        while(true){         
+            Draw::drawFunc([&](double x, double y) { 
+                return Functions::Heart::value(x, y, 1, size, size); 
+            }, T);
+            if(up) size += 0.05;
+            else size -= 0.05;
+            if(size > 1) up = false;
+            if(size < 0.7) up = true;
+            Sleep(50);
         }
     }
 };
