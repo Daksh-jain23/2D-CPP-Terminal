@@ -327,6 +327,7 @@ class Draw{
 
         return merged;
     }
+    
     template<typename... Grids>
     static std::vector<std::vector<double>> MergeValues(
         const std::vector<std::vector<double>>& first,
